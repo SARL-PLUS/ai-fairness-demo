@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Fairness Demo — Cat vs. Dog Adoption</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #232736;
+    --border: #2d3148;
+    --text: #e4e6f0;
+    --text-dim: #8b8fa8;
+    --accent: #6c5ce7;
+    --accent2: #a29bfe;
+    --green: #00b894;
+    --green-dim: #00b89433;
+    --red: #e17055;
+    --red-dim: #e1705533;
+    --orange: #fdcb6e;
+    --orange-dim: #fdcb6e33;
+    --cat: #fd79a8;
+    --dog: #74b9ff;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 1.5rem;
+  }
+
+  h1 {
+    font-size: 1.8rem;
+    font-weight: 800;
+    text-align: center;
+    margin-bottom: 0.3rem;
+    background: linear-gradient(135deg, var(--cat), var(--dog));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .subtitle {
+    text-align: center;
+    color: var(--text-dim);
+    font-size: 0.95rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .scenario {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.2rem;
+    margin-bottom: 1.5rem;
+    line-height: 1.6;
+    font-size: 0.9rem;
+  }
+
+  .scenario strong { color: var(--accent2); }
+  .scenario .emoji { font-size: 1.1rem; }
+
+  .layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.2rem;
+  }
+
+  .panel h2 {
+    font-size: 1rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .group-label {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+  }
+  .group-cat { background: var(--cat); color: #000; }
+  .group-dog { background: var(--dog); color: #000; }
+
+  .slider-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 0.8rem;
+  }
+
+  .slider-row label {
+    min-width: 120px;
+    font-size: 0.85rem;
+    font-weight: 500;
+  }
+
+  .slider-row input[type="range"] {
+    flex: 1;
+    accent-color: var(--accent);
+    height: 6px;
+  }
+
+  .slider-row .val {
+    min-width: 50px;
+    text-align: right;
+    font-weight: 700;
+    font-size: 0.95rem;
+    font-family: 'Courier New', monospace;
+  }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.6rem;
+    margin-top: 0.8rem;
+  }
+
+  .stat {
+    background: var(--surface2);
+    border-radius: 8px;
+    padding: 0.6rem 0.8rem;
+    text-align: center;
+  }
+
+  .stat .label { font-size: 0.7rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; }
+  .stat .value { font-size: 1.3rem; font-weight: 800; margin-top: 0.2rem; }
+  .stat .value.cat-color { color: var(--cat); }
+  .stat .value.dog-color { color: var(--dog); }
+
+  /* Fairness criteria panel */
+  .fairness-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.2rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .fairness-panel h2 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    text-align: center;
+  }
+
+  .criteria-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 1rem;
+  }
+
+  .criterion {
+    border-radius: 10px;
+    padding: 1rem;
+    text-align: center;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+  }
+
+  .criterion.pass {
+    background: var(--green-dim);
+    border-color: var(--green);
+  }
+
+  .criterion.fail {
+    background: var(--red-dim);
+    border-color: var(--red);
+  }
+
+  .criterion.close {
+    background: var(--orange-dim);
+    border-color: var(--orange);
+  }
+
+  .criterion .name {
+    font-weight: 700;
+    font-size: 0.95rem;
+    margin-bottom: 0.3rem;
+  }
+
+  .criterion .desc {
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    margin-bottom: 0.5rem;
+    line-height: 1.4;
+  }
+
+  .criterion .status {
+    font-size: 1.5rem;
+    font-weight: 800;
+  }
+
+  .criterion .detail {
+    font-size: 0.75rem;
+    margin-top: 0.3rem;
+    font-family: 'Courier New', monospace;
+  }
+
+  .criterion.pass .status { color: var(--green); }
+  .criterion.fail .status { color: var(--red); }
+  .criterion.close .status { color: var(--orange); }
+
+  /* Impossibility message */
+  .impossibility {
+    text-align: center;
+    padding: 1rem;
+    margin-top: 1rem;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
+  }
+
+  .impossibility.active {
+    background: linear-gradient(135deg, var(--accent), #e17055);
+    color: white;
+    animation: pulse 2s infinite;
+  }
+
+  .impossibility.inactive {
+    background: var(--surface2);
+    color: var(--text-dim);
+  }
+
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(108,92,231,0.4); }
+    50% { box-shadow: 0 0 20px 5px rgba(108,92,231,0.2); }
+  }
+
+  /* Visual population */
+  .population {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px;
+    padding: 0.5rem;
+    background: var(--surface2);
+    border-radius: 8px;
+    margin-top: 0.8rem;
+    min-height: 80px;
+    align-content: flex-start;
+  }
+
+  .animal {
+    width: 18px;
+    height: 18px;
+    border-radius: 3px;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    cursor: default;
+    position: relative;
+  }
+
+  .animal.accepted { opacity: 1; transform: scale(1); }
+  .animal.rejected { opacity: 0.25; transform: scale(0.85); }
+
+  .animal.tp { box-shadow: 0 0 0 2px var(--green); }
+  .animal.fp { box-shadow: 0 0 0 2px var(--red); }
+  .animal.tn { }
+  .animal.fn { box-shadow: 0 0 0 2px var(--orange); }
+
+  .legend {
+    display: flex;
+    gap: 1rem;
+    margin-top: 0.5rem;
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    flex-wrap: wrap;
+  }
+
+  .legend span {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .legend .dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    display: inline-block;
+  }
+
+  .threshold-line {
+    text-align: center;
+    margin: 0.5rem 0;
+    font-size: 0.8rem;
+    color: var(--accent2);
+    font-weight: 600;
+  }
+
+  .source {
+    text-align: center;
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    margin-top: 1rem;
+    font-style: italic;
+  }
+
+  /* Goals / Loss function panel */
+  .goals-panel {
+    background: var(--surface);
+    border: 1px solid var(--accent);
+    border-radius: 12px;
+    padding: 1.2rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .goals-panel h2 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    text-align: center;
+  }
+
+  .goals-panel .intro {
+    text-align: center;
+    font-size: 0.85rem;
+    color: var(--text-dim);
+    margin-bottom: 1rem;
+  }
+
+  .goal-buttons {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.8rem;
+    margin-bottom: 1rem;
+  }
+
+  .goal-btn {
+    background: var(--surface2);
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    padding: 0.8rem 0.6rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-align: center;
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+  }
+
+  .goal-btn:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(108,92,231,0.3);
+  }
+
+  .goal-btn.active {
+    border-color: var(--accent);
+    background: linear-gradient(135deg, rgba(108,92,231,0.2), rgba(162,155,254,0.1));
+    box-shadow: 0 0 15px rgba(108,92,231,0.2);
+  }
+
+  .goal-btn .goal-icon { font-size: 1.5rem; margin-bottom: 0.3rem; }
+  .goal-btn .goal-name { font-weight: 700; font-size: 0.85rem; margin-bottom: 0.2rem; }
+  .goal-btn .goal-desc { font-size: 0.7rem; color: var(--text-dim); line-height: 1.3; }
+
+  .goal-explanation {
+    background: var(--surface2);
+    border-radius: 10px;
+    padding: 1rem 1.2rem;
+    font-size: 0.88rem;
+    line-height: 1.6;
+    transition: all 0.3s ease;
+    min-height: 80px;
+  }
+
+  .goal-explanation .goal-title {
+    font-weight: 700;
+    color: var(--accent2);
+    margin-bottom: 0.3rem;
+    font-size: 0.95rem;
+  }
+
+  .goal-explanation .goal-formula {
+    font-family: 'Courier New', monospace;
+    background: var(--bg);
+    padding: 0.4rem 0.8rem;
+    border-radius: 6px;
+    display: inline-block;
+    margin: 0.4rem 0;
+    font-size: 0.8rem;
+    color: var(--orange);
+  }
+
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; }
+    .criteria-grid { grid-template-columns: 1fr; }
+    .goal-buttons { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<h1>🐱 AI Fairness Demo: Cat vs. Dog Adoption 🐶</h1>
+<p class="subtitle">Can an AI be fair to both groups? Adjust the thresholds and find out.</p>
+
+<div class="scenario">
+  <strong>Scenario:</strong> A pet shelter uses an AI to predict which animals will be adopted within 30 days.
+  Animals predicted "likely adopted" get <strong>premium website placement</strong> (more visibility = more chances).
+  <br><br>
+  <strong>The catch:</strong> Dogs have a <span class="emoji">🐶</span> <strong>70% adoption rate</strong>, but cats have a <span class="emoji">🐱</span> <strong>40% adoption rate</strong>.
+  The AI assigns each animal a "adoption score" from 0–100.
+  You set the <strong>threshold</strong> — animals above it get premium placement.
+  <br><br>
+  <strong>Your challenge:</strong> Can you set thresholds so that the AI is <em>fair</em> to both cats and dogs?
+  Try to make all three fairness criteria green. <strong>Spoiler: you can't.</strong>
+</div>
+
+<!-- Goal Presets -->
+<div class="goals-panel">
+  <h2>🎯 What Should the AI Optimize For?</h2>
+  <p class="intro">In machine learning, the <strong>loss function</strong> defines the AI's goal. Click a goal to see how it changes the thresholds — and which fairness criteria it satisfies or breaks.</p>
+  <div class="goal-buttons">
+    <button class="goal-btn" onclick="applyGoal('accuracy')">
+      <div class="goal-icon">🎯</div>
+      <div class="goal-name">Best Accuracy</div>
+      <div class="goal-desc">Minimize total errors (most correct predictions)</div>
+    </button>
+    <button class="goal-btn" onclick="applyGoal('independence')">
+      <div class="goal-icon">⚖️</div>
+      <div class="goal-name">Equal Selection</div>
+      <div class="goal-desc">Same % of cats & dogs get premium</div>
+    </button>
+    <button class="goal-btn" onclick="applyGoal('separation')">
+      <div class="goal-icon">🔬</div>
+      <div class="goal-name">Equal Accuracy</div>
+      <div class="goal-desc">Same error rates for both groups</div>
+    </button>
+    <button class="goal-btn" onclick="applyGoal('sufficiency')">
+      <div class="goal-icon">📊</div>
+      <div class="goal-name">Equal Meaning</div>
+      <div class="goal-desc">Score of 70 means same thing for both</div>
+    </button>
+  </div>
+  <div class="goal-explanation" id="goal-explanation">
+    <div class="goal-title">👆 Click a goal above</div>
+    Each button represents a different <strong>loss function</strong> — a different definition of "good."
+    The AI will find the best thresholds for that goal. Watch how the fairness criteria change below.
+  </div>
+</div>
+
+<div class="layout">
+  <!-- Cat Panel -->
+  <div class="panel">
+    <h2><span class="group-label group-cat">🐱 CATS</span> Group Settings</h2>
+    <div class="slider-row">
+      <label>Threshold:</label>
+      <input type="range" id="cat-threshold" min="0" max="100" value="40">
+      <span class="val" id="cat-threshold-val">40</span>
+    </div>
+    <div class="stats-grid">
+      <div class="stat"><div class="label">Acceptance Rate</div><div class="value cat-color" id="cat-accept">—</div></div>
+      <div class="stat"><div class="label">True Positive Rate</div><div class="value cat-color" id="cat-tpr">—</div></div>
+      <div class="stat"><div class="label">False Positive Rate</div><div class="value cat-color" id="cat-fpr">—</div></div>
+      <div class="stat"><div class="label">Precision</div><div class="value cat-color" id="cat-prec">—</div></div>
+    </div>
+    <div class="threshold-line">Score ≥ <span id="cat-thresh-display">40</span> → Premium Placement</div>
+    <div class="population" id="cat-population"></div>
+  </div>
+
+  <!-- Dog Panel -->
+  <div class="panel">
+    <h2><span class="group-label group-dog">🐶 DOGS</span> Group Settings</h2>
+    <div class="slider-row">
+      <label>Threshold:</label>
+      <input type="range" id="dog-threshold" min="0" max="100" value="40">
+      <span class="val" id="dog-threshold-val">40</span>
+    </div>
+    <div class="stats-grid">
+      <div class="stat"><div class="label">Acceptance Rate</div><div class="value dog-color" id="dog-accept">—</div></div>
+      <div class="stat"><div class="label">True Positive Rate</div><div class="value dog-color" id="dog-tpr">—</div></div>
+      <div class="stat"><div class="label">False Positive Rate</div><div class="value dog-color" id="dog-fpr">—</div></div>
+      <div class="stat"><div class="label">Precision</div><div class="value dog-color" id="dog-prec">—</div></div>
+    </div>
+    <div class="threshold-line">Score ≥ <span id="dog-thresh-display">40</span> → Premium Placement</div>
+    <div class="population" id="dog-population"></div>
+  </div>
+</div>
+
+<div class="legend" style="justify-content: center; margin-bottom: 1rem;">
+  <span><span class="dot" style="background: var(--green);"></span> True Positive (correct premium)</span>
+  <span><span class="dot" style="background: var(--red);"></span> False Positive (premium but won't be adopted)</span>
+  <span><span class="dot" style="border: 2px solid var(--orange); background: transparent;"></span> False Negative (missed — would have been adopted)</span>
+  <span><span class="dot" style="background: var(--surface); border: 1px solid var(--border);"></span> True Negative (correct skip)</span>
+</div>
+
+<!-- Fairness Criteria -->
+<div class="fairness-panel">
+  <h2>⚖️ Three Fairness Criteria — Can You Make All Green?</h2>
+  <div class="criteria-grid">
+    <div class="criterion" id="crit-independence">
+      <div class="name">Independence</div>
+      <div class="desc">Equal acceptance rates<br>across groups</div>
+      <div class="status" id="ind-status">—</div>
+      <div class="detail" id="ind-detail"></div>
+    </div>
+    <div class="criterion" id="crit-separation">
+      <div class="name">Separation</div>
+      <div class="desc">Equal error rates<br>(TPR & FPR) across groups</div>
+      <div class="status" id="sep-status">—</div>
+      <div class="detail" id="sep-detail"></div>
+    </div>
+    <div class="criterion" id="crit-sufficiency">
+      <div class="name">Sufficiency</div>
+      <div class="desc">Same score = same<br>adoption probability</div>
+      <div class="status" id="suf-status">—</div>
+      <div class="detail" id="suf-detail"></div>
+    </div>
+  </div>
+
+  <div class="impossibility inactive" id="impossibility-msg">
+    Try adjusting the thresholds above. Can you get all three criteria to ✅ at the same time?
+  </div>
+</div>
+
+<div class="source">
+  Based on: Hardt & Recht, <em>Patterns, Predictions, and Actions</em> (2022), Chapter 2 — "Decisions that discriminate"
+</div>
+
+<script>
+// === Generate synthetic populations ===
+const SEED = 42;
+const N_CATS = 60;
+const N_DOGS = 60;
+const CAT_ADOPTION_RATE = 0.40;
+const DOG_ADOPTION_RATE = 0.70;
+
+function seededRandom(seed) {
+  let s = seed;
+  return function() {
+    s = (s * 1664525 + 1013904223) & 0xFFFFFFFF;
+    return (s >>> 0) / 0xFFFFFFFF;
+  };
+}
+
+function generatePopulation(n, adoptionRate, rng) {
+  const animals = [];
+  for (let i = 0; i < n; i++) {
+    // True outcome: will be adopted?
+    const adopted = rng() < adoptionRate;
+    // Score: correlated with outcome but noisy
+    // Adopted animals tend to have higher scores
+    let score;
+    if (adopted) {
+      score = Math.min(100, Math.max(0, Math.round(55 + rng() * 40 - 10)));
+    } else {
+      score = Math.min(100, Math.max(0, Math.round(25 + rng() * 45 - 10)));
+    }
+    animals.push({ adopted, score });
+  }
+  // Sort by score for display
+  animals.sort((a, b) => a.score - b.score);
+  return animals;
+}
+
+const rng = seededRandom(SEED);
+const cats = generatePopulation(N_CATS, CAT_ADOPTION_RATE, rng);
+const dogs = generatePopulation(N_DOGS, DOG_ADOPTION_RATE, rng);
+
+// === Render populations ===
+function renderPopulation(containerId, animals, threshold, emoji) {
+  const container = document.getElementById(containerId);
+  container.innerHTML = '';
+  animals.forEach((a, i) => {
+    const div = document.createElement('div');
+    div.className = 'animal';
+    const accepted = a.score >= threshold;
+    const tp = accepted && a.adopted;
+    const fp = accepted && !a.adopted;
+    const fn = !accepted && a.adopted;
+    const tn = !accepted && !a.adopted;
+
+    div.classList.add(accepted ? 'accepted' : 'rejected');
+    if (tp) div.classList.add('tp');
+    if (fp) div.classList.add('fp');
+    if (fn) div.classList.add('fn');
+    if (tn) div.classList.add('tn');
+
+    div.style.background = accepted
+      ? (a.adopted ? 'var(--green)' : 'var(--red)')
+      : (a.adopted ? 'var(--orange)' : 'var(--surface)');
+
+    if (tn) div.style.border = '1px solid var(--border)';
+
+    div.textContent = emoji;
+    div.title = `Score: ${a.score} | ${a.adopted ? 'Will be adopted ✓' : 'Won\'t be adopted ✗'} | ${accepted ? 'PREMIUM' : 'skipped'}`;
+    container.appendChild(div);
+  });
+}
+
+// === Compute metrics ===
+function computeMetrics(animals, threshold) {
+  let tp = 0, fp = 0, tn = 0, fn = 0;
+  animals.forEach(a => {
+    const accepted = a.score >= threshold;
+    if (accepted && a.adopted) tp++;
+    if (accepted && !a.adopted) fp++;
+    if (!accepted && a.adopted) fn++;
+    if (!accepted && !a.adopted) tn++;
+  });
+
+  const total = animals.length;
+  const acceptRate = (tp + fp) / total;
+  const tpr = (tp + fn) > 0 ? tp / (tp + fn) : 0;
+  const fpr = (fp + tn) > 0 ? fp / (fp + tn) : 0;
+  const precision = (tp + fp) > 0 ? tp / (tp + fp) : 0;
+
+  return { tp, fp, tn, fn, acceptRate, tpr, fpr, precision };
+}
+
+// === Update UI ===
+function update() {
+  const catThreshold = parseInt(document.getElementById('cat-threshold').value);
+  const dogThreshold = parseInt(document.getElementById('dog-threshold').value);
+
+  document.getElementById('cat-threshold-val').textContent = catThreshold;
+  document.getElementById('dog-threshold-val').textContent = dogThreshold;
+  document.getElementById('cat-thresh-display').textContent = catThreshold;
+  document.getElementById('dog-thresh-display').textContent = dogThreshold;
+
+  const catM = computeMetrics(cats, catThreshold);
+  const dogM = computeMetrics(dogs, dogThreshold);
+
+  // Update stats
+  document.getElementById('cat-accept').textContent = (catM.acceptRate * 100).toFixed(0) + '%';
+  document.getElementById('cat-tpr').textContent = (catM.tpr * 100).toFixed(0) + '%';
+  document.getElementById('cat-fpr').textContent = (catM.fpr * 100).toFixed(0) + '%';
+  document.getElementById('cat-prec').textContent = (catM.precision * 100).toFixed(0) + '%';
+
+  document.getElementById('dog-accept').textContent = (dogM.acceptRate * 100).toFixed(0) + '%';
+  document.getElementById('dog-tpr').textContent = (dogM.tpr * 100).toFixed(0) + '%';
+  document.getElementById('dog-fpr').textContent = (dogM.fpr * 100).toFixed(0) + '%';
+  document.getElementById('dog-prec').textContent = (dogM.precision * 100).toFixed(0) + '%';
+
+  // Render populations
+  renderPopulation('cat-population', cats, catThreshold, '🐱');
+  renderPopulation('dog-population', dogs, dogThreshold, '🐶');
+
+  // === Fairness criteria ===
+  const TOLERANCE = 0.08; // 8% tolerance
+
+  // 1. Independence: equal acceptance rates
+  const indDiff = Math.abs(catM.acceptRate - dogM.acceptRate);
+  const indPass = indDiff < TOLERANCE;
+  const indClose = indDiff < TOLERANCE * 2;
+  setCriterion('crit-independence', 'ind-status', 'ind-detail',
+    indPass, indClose,
+    `Cat: ${(catM.acceptRate*100).toFixed(0)}% vs Dog: ${(dogM.acceptRate*100).toFixed(0)}%\nΔ = ${(indDiff*100).toFixed(1)}%`
+  );
+
+  // 2. Separation: equal TPR AND FPR
+  const tprDiff = Math.abs(catM.tpr - dogM.tpr);
+  const fprDiff = Math.abs(catM.fpr - dogM.fpr);
+  const sepPass = tprDiff < TOLERANCE && fprDiff < TOLERANCE;
+  const sepClose = (tprDiff < TOLERANCE * 2) && (fprDiff < TOLERANCE * 2);
+  setCriterion('crit-separation', 'sep-status', 'sep-detail',
+    sepPass, sepClose,
+    `TPR: ${(catM.tpr*100).toFixed(0)}% vs ${(dogM.tpr*100).toFixed(0)}% (Δ${(tprDiff*100).toFixed(0)}%)\nFPR: ${(catM.fpr*100).toFixed(0)}% vs ${(dogM.fpr*100).toFixed(0)}% (Δ${(fprDiff*100).toFixed(0)}%)`
+  );
+
+  // 3. Sufficiency: equal precision (same score = same meaning)
+  const precDiff = Math.abs(catM.precision - dogM.precision);
+  const sufPass = precDiff < TOLERANCE;
+  const sufClose = precDiff < TOLERANCE * 2;
+  setCriterion('crit-sufficiency', 'suf-status', 'suf-detail',
+    sufPass, sufClose,
+    `Precision Cat: ${(catM.precision*100).toFixed(0)}% vs Dog: ${(dogM.precision*100).toFixed(0)}%\nΔ = ${(precDiff*100).toFixed(1)}%`
+  );
+
+  // Impossibility message
+  const allPass = indPass && sepPass && sufPass;
+  const msg = document.getElementById('impossibility-msg');
+  if (allPass) {
+    msg.className = 'impossibility active';
+    msg.innerHTML = '🎉 Wait — did you actually get all three? Check the numbers carefully! (With tolerance, edge cases are possible on small data.)';
+  } else {
+    const passCount = [indPass, sepPass, sufPass].filter(Boolean).length;
+    msg.className = 'impossibility active';
+    if (passCount === 0) {
+      msg.innerHTML = '❌ No criteria satisfied. Keep adjusting! Try different thresholds for cats and dogs.';
+    } else if (passCount === 1) {
+      msg.innerHTML = '⚠️ 1 of 3 criteria satisfied. Getting closer — but can you get all three?';
+    } else {
+      msg.innerHTML = '🔥 2 of 3 criteria satisfied! But the third won\'t cooperate. <strong>This is the fairness impossibility theorem in action.</strong>';
+    }
+  }
+}
+
+function setCriterion(boxId, statusId, detailId, pass, close, detail) {
+  const box = document.getElementById(boxId);
+  const status = document.getElementById(statusId);
+  const detailEl = document.getElementById(detailId);
+
+  box.className = 'criterion ' + (pass ? 'pass' : close ? 'close' : 'fail');
+  status.textContent = pass ? '✅' : close ? '⚠️' : '❌';
+  detailEl.textContent = detail;
+}
+
+// === Goal presets (loss function simulation) ===
+function applyGoal(goal) {
+  // Clear active states
+  document.querySelectorAll('.goal-btn').forEach(b => b.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+
+  let bestCat = 40, bestDog = 40;
+  let bestScore = -Infinity;
+  const explanationEl = document.getElementById('goal-explanation');
+
+  // Brute-force search over all threshold pairs
+  for (let ct = 0; ct <= 100; ct += 2) {
+    for (let dt = 0; dt <= 100; dt += 2) {
+      const cm = computeMetrics(cats, ct);
+      const dm = computeMetrics(dogs, dt);
+      let score = 0;
+
+      if (goal === 'accuracy') {
+        // Maximize total correct predictions
+        const catCorrect = cm.tp + cm.tn;
+        const dogCorrect = dm.tp + dm.tn;
+        score = catCorrect + dogCorrect;
+      }
+      else if (goal === 'independence') {
+        // Maximize accuracy WHILE keeping acceptance rates equal
+        const catCorrect = cm.tp + cm.tn;
+        const dogCorrect = dm.tp + dm.tn;
+        const accRate = catCorrect + dogCorrect;
+        const penalty = Math.abs(cm.acceptRate - dm.acceptRate) * 200;
+        score = accRate - penalty;
+      }
+      else if (goal === 'separation') {
+        // Maximize accuracy WHILE equalizing TPR and FPR
+        const catCorrect = cm.tp + cm.tn;
+        const dogCorrect = dm.tp + dm.tn;
+        const accRate = catCorrect + dogCorrect;
+        const tprPenalty = Math.abs(cm.tpr - dm.tpr) * 150;
+        const fprPenalty = Math.abs(cm.fpr - dm.fpr) * 150;
+        score = accRate - tprPenalty - fprPenalty;
+      }
+      else if (goal === 'sufficiency') {
+        // Maximize accuracy WHILE equalizing precision
+        const catCorrect = cm.tp + cm.tn;
+        const dogCorrect = dm.tp + dm.tn;
+        const accRate = catCorrect + dogCorrect;
+        const precPenalty = Math.abs(cm.precision - dm.precision) * 200;
+        score = accRate - precPenalty;
+      }
+
+      if (score > bestScore) {
+        bestScore = score;
+        bestCat = ct;
+        bestDog = dt;
+      }
+    }
+  }
+
+  // Animate sliders to optimal values
+  document.getElementById('cat-threshold').value = bestCat;
+  document.getElementById('dog-threshold').value = bestDog;
+  update();
+
+  // Show explanation
+  const explanations = {
+    accuracy: {
+      title: '🎯 Goal: Maximize Overall Accuracy',
+      formula: 'Loss = total_errors = FP + FN',
+      text: 'The AI only cares about making <strong>as few mistakes as possible overall</strong>. It finds one threshold per group that minimizes total errors. This often means the <strong>same threshold</strong> for both — but since dogs are adopted more often, the AI becomes <strong>better at predicting dogs</strong> and worse for cats. Check the error rates below!',
+      tradeoff: 'Tends to satisfy <strong>Sufficiency</strong> but violates <strong>Separation</strong> (unequal error rates across groups).'
+    },
+    independence: {
+      title: '⚖️ Goal: Equal Selection Rate (Demographic Parity)',
+      formula: 'Loss = total_errors + λ · |accept_rate_cats - accept_rate_dogs|',
+      text: 'The AI tries to be accurate BUT also wants to <strong>select the same percentage</strong> of cats and dogs. To do this with different base rates, it must <strong>lower the bar for cats</strong> (or raise it for dogs). This means more cats get premium spots — but at the cost of more false positives for cats.',
+      tradeoff: 'Satisfies <strong>Independence</strong> but often breaks <strong>Separation</strong> and <strong>Sufficiency</strong>.'
+    },
+    separation: {
+      title: '🔬 Goal: Equal Error Rates (Equalized Odds)',
+      formula: 'Loss = total_errors + λ · (|TPR_diff| + |FPR_diff|)',
+      text: 'The AI wants to make the <strong>same types of mistakes</strong> for both groups — equal true positive rates AND equal false positive rates. Since cats have lower adoption rates, this requires <strong>different thresholds</strong> per group. The AI adjusts to be equally accurate for both.',
+      tradeoff: 'Satisfies <strong>Separation</strong> but typically breaks <strong>Independence</strong> (unequal selection rates).'
+    },
+    sufficiency: {
+      title: '📊 Goal: Equal Score Meaning (Calibration)',
+      formula: 'Loss = total_errors + λ · |precision_cats - precision_dogs|',
+      text: 'The AI wants a score of "70" to <strong>mean the same thing</strong> whether it\'s a cat or a dog. If 70% of dogs scored 70+ get adopted, then 70% of cats scored 70+ should too. This is what the COMPAS vendor (Northpointe) argued for.',
+      tradeoff: 'Satisfies <strong>Sufficiency</strong> but typically breaks <strong>Separation</strong> (ProPublica\'s criticism of COMPAS).'
+    }
+  };
+
+  const exp = explanations[goal];
+  explanationEl.innerHTML = `
+    <div class="goal-title">${exp.title}</div>
+    <div class="goal-formula">${exp.formula}</div>
+    <p>${exp.text}</p>
+    <p style="margin-top: 0.5rem; color: var(--orange);"><strong>Trade-off:</strong> ${exp.tradeoff}</p>
+  `;
+}
+
+// Event listeners
+document.getElementById('cat-threshold').addEventListener('input', () => {
+  document.querySelectorAll('.goal-btn').forEach(b => b.classList.remove('active'));
+  update();
+});
+document.getElementById('dog-threshold').addEventListener('input', () => {
+  document.querySelectorAll('.goal-btn').forEach(b => b.classList.remove('active'));
+  update();
+});
+
+// Initial render
+update();
+</script>
+
+</body>
+</html>
