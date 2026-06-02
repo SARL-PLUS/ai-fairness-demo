@@ -22,13 +22,30 @@ This isn't just a toy example. The same mathematical tension underlies real-worl
 
 ## The Three Fairness Criteria
 
-| Criterion | Intuition | Formal |
-|---|---|---|
-| **Independence** | Equal selection rates across groups | P(Ŷ=1 \| G=a) = P(Ŷ=1 \| G=b) |
-| **Separation** | Equal error rates (TPR & FPR) across groups | P(Ŷ=1 \| Y=y, G=a) = P(Ŷ=1 \| Y=y, G=b) |
-| **Sufficiency** | Same score = same meaning for both groups | P(Y=1 \| Ŷ=ŷ, G=a) = P(Y=1 \| Ŷ=ŷ, G=b) |
+### ⚖️ Independence — *"Equal chances for everyone"*
+
+The AI should give **the same percentage** of cats and dogs the premium spot.
+
+> **Example:** If 60% of dogs get premium placement, then 60% of cats should too — regardless of whether they actually get adopted. It's about equal opportunity.
+
+### 🔬 Separation — *"Equal mistakes for everyone"*
+
+The AI should make the **same types of errors** for both groups.
+
+> **Example:** If the AI correctly identifies 80% of dogs that *will* be adopted (and misses 20%), it should also correctly identify 80% of adoptable cats — not just 50%. Same accuracy for both, not just overall.
+
+### 📊 Sufficiency — *"Same score means the same thing"*
+
+A score of "70" should mean the **same probability of adoption** whether it's a cat or a dog.
+
+> **Example:** If 75% of dogs who score 70+ actually get adopted, then 75% of cats who score 70+ should also get adopted. The score should be equally trustworthy for both groups.
+
+### 🚫 The Catch — You Can't Have All Three
+
+When the groups have **different base rates** (dogs: 70% adopted, cats: 40% adopted), satisfying all three criteria at the same time is **mathematically impossible**. You always have to choose — and that choice is an ethical one, not a technical one.
 
 **The impossibility theorem** (Chouldechova 2017; Kleinberg, Mullainathan & Raghavan 2016): When the base rates differ between groups, you **cannot satisfy all three criteria simultaneously** — except in trivial cases (perfect prediction or equal base rates).
+
 
 ## How to Use
 
